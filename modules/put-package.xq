@@ -10,6 +10,7 @@ import module namespace scanrepo="http://exist-db.org/xquery/admin/scanrepo" at 
 
 declare namespace request="http://exist-db.org/xquery/request";
 declare namespace sm="http://exist-db.org/xquery/securitymanager";
+declare namespace response="http://exist-db.org/xquery/response";
 declare namespace xmldb="http://exist-db.org/xquery/xmldb";
 
 declare namespace output="http://www.w3.org/2010/xslt-xquery-serialization";
@@ -71,6 +72,7 @@ return
                         "name": $xar-filename,
                         "error": $err:description
                     }
+            response:set-status-code(500),
             }
         }
     else
