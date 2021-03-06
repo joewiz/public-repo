@@ -65,13 +65,10 @@ return
             local:upload-and-publish($xar-filename, $xar-binary),
             local:log-put-package-event($xar-filename)
         } catch * {
-            map {
-                "result": 
-                    map { 
-                        "name": $xar-filename,
-                        "error": $err:description
-                    }
             response:set-status-code(500),
+            map { 
+                "name": $xar-filename,
+                "error": $err:description
             }
         }
     else
