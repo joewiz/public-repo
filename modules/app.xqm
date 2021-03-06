@@ -450,3 +450,18 @@ declare function app:mkcol($collection as xs:string, $path as xs:string) {
     app:mkcol-recursive($collection, tokenize($path, "/"))
 };
 
+(:~
+ : Store resources and set group permissions
+ :)
+declare function app:store($collection-uri as xs:string, $resource-name as xs:string?, $contents as item()) as xs:string? {
+    xmldb:store($collection-uri, $resource-name, $contents) !
+        (app:set-permissions(xs:anyURI(.)), .)
+};
+
+(:~
+ : Set group permissions
+ :)
+declare function app:set-permissions($path as xs:anyURI) as empty-sequence() {
+    sm:chgrp($path, config:repo-permissions()?group),
+    sm:chmod($path, config:repo-permissions()?permissions)
+};

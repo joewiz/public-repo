@@ -79,7 +79,8 @@ declare function config:repo-permissions() as map(*) {
     config:repo-descriptor()/repo:permissions ! 
         map { 
             "user": ./@user/string(), 
-            "group": ./@group/string() 
+            "group": ./@group/string(),
+            "permissions": ./@permissions/string()
         }
 };
 
