@@ -9,7 +9,6 @@ import module namespace config="http://exist-db.org/xquery/apps/config" at "conf
 import module namespace scanrepo="http://exist-db.org/xquery/admin/scanrepo" at "scan.xqm";
 
 declare namespace request="http://exist-db.org/xquery/request";
-declare namespace sm="http://exist-db.org/xquery/securitymanager";
 declare namespace response="http://exist-db.org/xquery/response";
 declare namespace xmldb="http://exist-db.org/xquery/xmldb";
 
@@ -35,14 +34,14 @@ declare function local:log-put-package-event($filename as xs:string) as empty-se
         else
             ( 
                 app:mkcol($config:logs-col, config:log-subcol($today)),
-                xmldb:store(config:log-col($today), config:log-doc-name($today), element public-repo-log { $event } )
+                app:store(config:log-col($today), config:log-doc-name($today), element public-repo-log { $event } )
             )
     return
         ()
 };
 
 declare function local:upload-and-publish($xar-filename as xs:string, $xar-binary as xs:base64Binary) {
-    let $path := xmldb:store($config:packages-col, $xar-filename, $xar-binary)
+    let $path := app:store($config:packages-col, $xar-filename, $xar-binary)
     let $publish := scanrepo:publish-package($xar-filename)
     return
         map { 

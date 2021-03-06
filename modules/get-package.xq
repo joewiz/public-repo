@@ -33,7 +33,7 @@ declare function local:log-get-package-event($filename as xs:string) as empty-se
         else
             ( 
                 app:mkcol($config:logs-col, config:log-subcol($today)),
-                xmldb:store(config:log-col($today), config:log-doc-name($today), element public-repo-log { $event } )
+                app:store(config:log-col($today), config:log-doc-name($today), element public-repo-log { $event } )
             )
     return
         ()

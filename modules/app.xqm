@@ -436,7 +436,8 @@ function app:mkcol-recursive($collection as xs:string, $components as xs:string*
     if (exists($components)) then
         let $newColl := concat($collection, "/", $components[1])
         return (
-            xmldb:create-collection($collection, $components[1]),
+            xmldb:create-collection($collection, $components[1]) !
+                (app:set-permissions(xs:anyURI(.)), .),
             app:mkcol-recursive($newColl, subsequence($components, 2))
         )
     else

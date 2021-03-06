@@ -6,6 +6,7 @@ xquery version "3.1";
 
 module namespace scanrepo="http://exist-db.org/xquery/admin/scanrepo";
 
+import module namespace app="http://exist-db.org/xquery/app" at "app.xqm";
 import module namespace config="http://exist-db.org/xquery/apps/config" at "config.xqm";
 import module namespace semver="http://exist-db.org/xquery/semver";
 
@@ -25,7 +26,7 @@ function scanrepo:handle-icon($path as xs:string, $data as item()?, $param as it
     let $pkgName := substring-before($param, ".xar")
     let $suffix := replace($path, "^.*\.([^\.]+)", "$1")
     let $name := concat($pkgName, ".", $suffix)
-    let $stored := xmldb:store($config:icons-col, $name, $data)
+    let $stored := app:store($config:icons-col, $name, $data)
     return
         element icon { $name }
 };
@@ -213,7 +214,7 @@ declare function scanrepo:rebuild-package-groups() as xs:string {
                 $group
         }
     return
-        xmldb:store($config:metadata-col, $config:package-groups-doc-name, $package-groups)
+        app:store($config:metadata-col, $config:package-groups-doc-name, $package-groups)
 };
 
 (:~
@@ -228,7 +229,7 @@ declare function scanrepo:rebuild-raw-packages() as xs:string {
                 scanrepo:extract-raw-package($package-xar)
         }
     return
-        xmldb:store($config:metadata-col, $config:raw-packages-doc-name, $raw-packages)
+        app:store($config:metadata-col, $config:raw-packages-doc-name, $raw-packages)
 };
 
 (:~
