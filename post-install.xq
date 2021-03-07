@@ -1,18 +1,13 @@
 xquery version "3.1";
 
 (:~
- : This post-install script sets permissions on the package data collection hierarchy.
- : When pre-install creates the public-repo-data collection, its permissions are admin/dba. 
- : This ensures the collections are owned by the default user and group for the app.
- : The script also builds the package metadata if it doesn't already exist.
+ : This post-install script stores collection configuration for the public-repo-data collection
+ : and sets permisisons on queries that need to run as repo.
  :)
- 
+
 import module namespace config="http://exist-db.org/xquery/apps/config" at "modules/config.xqm";
-import module namespace scanrepo="http://exist-db.org/xquery/admin/scanrepo" at "modules/scan.xqm";
 
 declare namespace sm="http://exist-db.org/xquery/securitymanager";
-declare namespace system="http://exist-db.org/xquery/system";
-declare namespace xmldb="http://exist-db.org/xquery/xmldb";
 
 (: The following external variables are set by the repo:deploy function :)
 
@@ -23,45 +18,36 @@ declare variable $dir external;
 (: the target collection into which the app is deployed :)
 declare variable $target external;
 
-(: Until https://github.com/eXist-db/exist/issues/3734 is fixed, we hard code the default group name :)
-declare variable $repo-group := 
-    (: config:repo-permissions()?group :)
-    "repo"
-;
-declare variable $repo-user := 
-    (: config:repo-permissions()?user :)
-    "repo"
-;
-
-(:~
- : Set user and group to be owner by values in repo.xml
- :)
-declare function local:set-data-collection-permissions($resource as xs:string) {
-    if (sm:get-permissions(xs:anyURI($resource))/sm:permission/@group = $repo-group) then
-        ()
-    else
-        (
-            sm:chown($resource, $repo-user),
-            sm:chgrp($resource, $repo-group),
-            sm:chmod(xs:anyURI($resource), "rwxrwxr-x")
+(: Helper function to recursively create a collection hierarchy :)
+declare function local:mkcol-recursive($collection as xs:string, $components as xs:string*) {
+    if (exists($components)) then
+        let $newColl := concat($collection, "/", $components[1])
+        return (
+            xmldb:create-collection($collection, $components[1]),
+            local:mkcol-recursive($newColl, subsequence($components, 2))
         )
+    else
+        ()
 };
 
-(: Set user and group ownership on the package data collection hierarchy :)
+(: Create a collection hierarchy :)
+declare function local:mkcol($collection as xs:string, $path as xs:string) {
+    local:mkcol-recursive($collection, tokenize($path, "/"))
+};
 
-for $col in ($config:app-data-col, xmldb:get-child-collections($config:app-data-col) ! ($config:app-data-col || "/" || .))
-return
-    local:set-data-collection-permissions($col),
+(: Configuration file for the logs collection :)
+declare variable $logs-xconf := 
+    <collection xmlns="http://exist-db.org/collection-config/1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+        <index>
+            <range>
+                <create qname="type" type="xs:string"/>
+            </range>
+        </index>
+    </collection>;
 
-(: Build package metadata if missing :)
+(: Store the collection configuration :)
+local:mkcol("/db/system/config", $config:logs-col),
+xmldb:store("/db/system/config" || $config:logs-col, "collection.xconf", $logs-xconf),
 
-if (doc-available($config:raw-packages-doc) and doc-available($config:package-groups-doc)) then
-    ()
-else
-    (
-        scanrepo:rebuild-all-package-metadata(),
-        ($config:raw-packages-doc, $config:package-groups-doc) ! local:set-data-collection-permissions(.)
-    ),
-    
-(: execute get-package.xq as repo group, so that it can write to logs :)
+(: execute get-package.xq as repo group, so that it can write to logs when accessed by guest users :)
 sm:chmod(xs:anyURI($target || "/modules/get-package.xq"), "rwsrwxr-x")
