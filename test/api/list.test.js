@@ -27,14 +27,16 @@ describe('/public/apps.xml endpoint', () => {
         assert.ok(text.includes('version="6.0.0"'), 'Expected version attribute to reflect parameter');
     });
 
-    it('should contain app elements with expected structure', async () => {
+    it('should contain app elements with expected structure when packages exist', async () => {
         const res = await fetch(`${BASE_URL}/public/apps.xml`);
         const text = await res.text();
         // If there are any packages, they should have basic metadata
-        if (text.includes('<app')) {
-            assert.ok(text.includes('<title'), 'Expected title in app element');
-            assert.ok(text.includes('<name'), 'Expected name in app element');
-            assert.ok(text.includes('<version'), 'Expected version in app element');
+        if (text.includes('<app ')) {
+            assert.ok(text.includes('<title>'), 'Expected title in app element');
+            assert.ok(text.includes('<name>'), 'Expected name in app element');
+            assert.ok(text.includes('<version>'), 'Expected version in app element');
         }
+        // If no packages exist yet, the empty <apps/> element is still valid
+        assert.ok(text.includes('<apps'), 'Expected apps root element');
     });
 });

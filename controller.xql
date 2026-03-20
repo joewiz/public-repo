@@ -91,7 +91,10 @@ if ($isGet and $exist:path eq "") then (
 
 (: Redirect request for package detail with legacy ".html" extension to new canonical pattern without the extension :)
 ) else if ($isGet and starts-with($exist:path, "/packages") and ends-with($exist:resource, ".html")) then (
-    redirect:permanent($app-root-absolute-url || "/packages/" || substring-before($exist:resource, ".html") || "?" || request:get-query-string())
+    response:set-status-code(301),
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+        <redirect url="{$app-root-absolute-url}/packages/{substring-before($exist:resource, ".html")}?{request:get-query-string()}"/>
+    </dispatch>
 
 (: Serve package detail - without the legacy ".html" extension :)
 ) else if ($isGet and starts-with($exist:path, "/packages")) then (
@@ -145,7 +148,10 @@ if ($isGet and $exist:path eq "") then (
  : - shared-resources v0.8.4 and earlier (fixed in https://github.com/eXist-db/shared-resources/releases/tag/v0.8.5) --> and thus all versions of eXist up to and including v4.7.0.
  :)
 ) else if ($isGet and $exist:path eq "/modules/find.xql") then (
-    redirect:permanent($app-root-absolute-url || "/find?" || request:get-query-string())
+    response:set-status-code(301),
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+        <redirect url="{$app-root-absolute-url}/find?{request:get-query-string()}"/>
+    </dispatch>
 
 ) else if ($isGet and $exist:path eq "/find") then (
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
