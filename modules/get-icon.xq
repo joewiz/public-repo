@@ -22,9 +22,13 @@ return
         response:stream(doc($path), "media-type=" || xmldb:get-mime-type($path))
     (: png :)
     else if (util:binary-doc-available($path)) then
-        response:stream-binary(util:binary-doc($path), xmldb:get-mime-type($path))
+        response:stream-binary(util:binary-doc($path), xmldb:get-mime-type($path), $filename)
     else
         (
             response:set-status-code(404),
-            <p>Icon file not found!</p>
+            response:set-header("Content-Type", "application/xml"),
+            <error>
+                <status>404</status>
+                <message>Icon file "{$filename}" not found.</message>
+            </error>
         )

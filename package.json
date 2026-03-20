@@ -6,7 +6,11 @@
     "test": "test"
   },
   "scripts": {
-    "test": "npx cypress run"
+    "build": "ant",
+    "build:clean": "ant rebuild",
+    "test": "npx cypress run",
+    "test:api": "node --test test/api/*.test.js",
+    "test:smoke": "bats test/bats/*.bats"
   },
   "repository": {
     "type": "git",

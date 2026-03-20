@@ -3,6 +3,7 @@ xquery version "3.1";
 import module namespace login="http://exist-db.org/xquery/login" at "resource:org/exist/xquery/modules/persistentlogin/login.xql";
 
 import module namespace config="http://exist-db.org/xquery/apps/config" at "modules/config.xqm";
+import module namespace redirect="http://exist-db.org/xquery/lib/redirect" at "modules/redirect.xqm";
 
 declare namespace sm="http://exist-db.org/xquery/securitymanager";
 
@@ -90,10 +91,7 @@ if ($isGet and $exist:path eq "") then (
 
 (: Redirect request for package detail with legacy ".html" extension to new canonical pattern without the extension :)
 ) else if ($isGet and starts-with($exist:path, "/packages") and ends-with($exist:resource, ".html")) then (
-    (: TODO make the redirect issue a 301 :)
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <redirect url="{$app-root-absolute-url}/packages/{substring-before($exist:resource, ".html")}?{request:get-query-string()}"/>
-    </dispatch>
+    redirect:permanent($app-root-absolute-url || "/packages/" || substring-before($exist:resource, ".html") || "?" || request:get-query-string())
 
 (: Serve package detail - without the legacy ".html" extension :)
 ) else if ($isGet and starts-with($exist:path, "/packages")) then (
@@ -119,6 +117,7 @@ if ($isGet and $exist:path eq "") then (
 ) then (
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
         <forward url="{$exist:controller}/modules/get-package.xq">
+            <set-header name="Cache-Control" value="public, max-age=31536000, immutable"/>
             <add-parameter name="filename" value="{$exist:resource}"/>
         </forward>
     </dispatch>
@@ -146,10 +145,7 @@ if ($isGet and $exist:path eq "") then (
  : - shared-resources v0.8.4 and earlier (fixed in https://github.com/eXist-db/shared-resources/releases/tag/v0.8.5) --> and thus all versions of eXist up to and including v4.7.0.
  :)
 ) else if ($isGet and $exist:path eq "/modules/find.xql") then (
-    (: TODO make the redirect issue a 301 :)
-    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
-        <redirect url="{$app-root-absolute-url}/find?{request:get-query-string()}"/>
-    </dispatch>
+    redirect:permanent($app-root-absolute-url || "/find?" || request:get-query-string())
 
 ) else if ($isGet and $exist:path eq "/find") then (
     <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
@@ -227,5 +223,13 @@ if ($isGet and $exist:path eq "") then (
 (: Respond with a 404 Not Found error  :)
 ) else (
     response:set-status-code(404),
-    <data>Not found</data>
+    <dispatch xmlns="http://exist.sourceforge.net/NS/exist">
+        <forward url="{$exist:controller}/templates/error.html"/>
+        <view>
+            <forward url="{$exist:controller}/modules/view.xq">
+                <set-header name="Cache-Control" value="no-cache"/>
+                <add-parameter name="base-url" value="{$app-root-absolute-url}"/>
+            </forward>
+        </view>
+    </dispatch>
 )

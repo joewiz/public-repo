@@ -6,6 +6,9 @@ xquery version "3.1";
  : Responds to requests like:
  : - /exist/apps/public-repo/public/eXide-1.0.0.xar
  : - /exist/apps/public-repo/public/eXide-1.0.0.xar.zip
+ :
+ : Uses response:stream-binary#3 for compatibility with both eXist 6.x and 7.x.
+ : See https://github.com/eXist-db/public-repo/issues/104
  :)
 
 import module namespace config="http://exist-db.org/xquery/apps/config" at "config.xqm";
@@ -58,11 +61,16 @@ return
                 let $entry := <entry type="binary" method="store" name="/{$xar-filename}">{$xar}</entry>
                 let $zip := compression:zip($entry, false())
                 return
-                    response:stream-binary($zip, "application/zip")
+                    response:stream-binary($zip, "application/zip", $filename)
             else
-                response:stream-binary($xar, "application/zip")
+                response:stream-binary($xar, "application/zip", $xar-filename)
     else
         (
+            local:log-package-not-found-event($xar-filename),
             response:set-status-code(404),
-            <p>Package file not found!</p>
+            response:set-header("Content-Type", "application/xml"),
+            <error>
+                <status>404</status>
+                <message>Package file "{$xar-filename}" not found.</message>
+            </error>
         )

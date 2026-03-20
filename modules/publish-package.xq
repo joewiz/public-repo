@@ -34,16 +34,20 @@ declare function local:log-put-package-event($filename as xs:string) as empty-se
 };
 
 declare function local:upload-and-publish($xar-filename as xs:string, $xar-binary as xs:base64Binary) as map(*) {
-    let $path := scanrepo:store($config:packages-col, $xar-filename, $xar-binary)
-    let $publish := scanrepo:publish-package($xar-filename)
+    (: Derive a versioned filename to prevent collisions when different versions
+     : of a package are uploaded with the same filename.
+     : See https://github.com/eXist-db/public-repo/issues/133 :)
+    let $versioned-filename := scanrepo:derive-versioned-filename($xar-binary)
+    let $path := scanrepo:store($config:packages-col, $versioned-filename, $xar-binary)
+    let $publish := scanrepo:publish-package($versioned-filename)
     return
-        map { 
+        map {
             "files": array {
-                map { 
-                    "name": $xar-filename,
+                map {
+                    "name": $versioned-filename,
                     "type": xmldb:get-mime-type($path),
-                    "size": xmldb:size($config:packages-col, $xar-filename)
-                }   
+                    "size": xmldb:size($config:packages-col, $versioned-filename)
+                }
             }
         }
 };
@@ -72,9 +76,14 @@ if (not(local:user-can-publish())) then (
     }
 ) else (
     try {
-        local:upload-and-publish($xar-filename, $xar-binary),
-        local:log-put-package-event($xar-filename)
+        let $result := local:upload-and-publish($xar-filename, $xar-binary)
+        let $versioned-filename := $result?files?(1)?name
+        return (
+            $result,
+            local:log-put-package-event($versioned-filename)
+        )
     } catch * {
+        response:set-status-code(500),
         map {
             "result": map {
                 "name": request:get-uploaded-file-name($local:file-upload-parameter-name),
