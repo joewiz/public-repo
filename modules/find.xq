@@ -74,14 +74,19 @@ declare variable $json-preferred := local:prefers-json(local:parse-accept-header
 
 declare function local:log-find-event($package as element(package)?) as empty-sequence() {
     if (exists($package)) then
-        log:event(
-            element event {
-                element dateTime { current-dateTime() },
-                element type { "find-package" },
-                element package-name { $package/name/string() },
-                element package-version { $package/version/string() }
-            }
-        )
+        (: /find is a public endpoint so the guest user may not have write permission to logs :)
+        try {
+            log:event(
+                element event {
+                    element dateTime { current-dateTime() },
+                    element type { "find-package" },
+                    element package-name { $package/name/string() },
+                    element package-version { $package/version/string() }
+                }
+            )
+        } catch * {
+            util:log("warn", "Could not log find event: " || $err:description)
+        }
     else ()
 };
 
