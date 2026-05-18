@@ -63,13 +63,50 @@ declare function local:user-can-publish() as xs:boolean {
     )
 };
 
+(: True when the request authenticated via HTTP Basic. CLI clients
+ : (xst, packageservice, curl --user) use Basic and cannot be CSRF-forged
+ : without the user's password, so they are exempt from the Origin check. :)
+declare function local:is-basic-auth() as xs:boolean {
+    let $auth := request:get-header("Authorization")
+    return exists($auth) and starts-with(lower-case($auth), "basic ")
+};
+
+(: Same-origin check for cookie-authenticated state-changing requests.
+ : Returns true if the request is exempt (Basic auth) or if the Origin
+ : (preferred) or Referer header's scheme+host+port match this server.
+ : Returns false otherwise — including when both headers are absent on a
+ : cookie-auth request (no header, no trust). :)
+declare function local:origin-allowed() as xs:boolean {
+    if (local:is-basic-auth()) then
+        true()
+    else
+        let $origin := (request:get-header("Origin"), request:get-header("Referer"))[1]
+        let $expected-scheme := if (request:get-scheme() = "https") then "https" else "http"
+        let $expected-port := request:get-server-port()
+        let $expected-host := request:get-server-name()
+        let $default-port := ($expected-scheme = "http" and $expected-port = 80) or
+                             ($expected-scheme = "https" and $expected-port = 443)
+        let $expected := $expected-scheme || "://" || $expected-host ||
+                         (if ($default-port) then "" else ":" || $expected-port)
+        return
+            exists($origin) and (
+                $origin = $expected or
+                starts-with($origin, $expected || "/")
+            )
+};
+
 let $_ := util:log("info", request:get-parameter-names())
 
 let $xar-filename := request:get-uploaded-file-name($local:file-upload-parameter-name)
 let $xar-binary := request:get-uploaded-file-data($local:file-upload-parameter-name)
 
 return
-if (not(local:user-can-publish())) then (
+if (not(local:origin-allowed())) then (
+    response:set-status-code(403),
+    map {
+        "error": "Cross-origin request rejected. Same-origin Origin or Referer header required for cookie-authenticated uploads."
+    }
+) else if (not(local:user-can-publish())) then (
     response:set-status-code(403),
     map {
         "error": "User must be a member of the " || config:repo-permissions()?group || " group."
